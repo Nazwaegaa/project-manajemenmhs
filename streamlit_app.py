@@ -3,6 +3,9 @@ import json
 import os
 from copy import deepcopy
 
+# =============================
+# CONFIG
+# =============================
 DB_FILE = "students_db.json"
 
 USERS = {
@@ -11,9 +14,9 @@ USERS = {
     "viewer": {"password": "view123", "role": "VIEWER"}
 }
 
-# =========================
-# DATA HANDLING
-# =========================
+# =============================
+# DATA UTILS
+# =============================
 def load_data():
     if not os.path.exists(DB_FILE):
         return []
@@ -24,16 +27,16 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# =========================
+# =============================
 # SORTING ALGORITHMS
-# =========================
+# =============================
 def bubble_sort(data, key):
     arr = data[:]
     n = len(arr)
     for i in range(n):
-        for j in range(0, n-i-1):
-            if arr[j][key] > arr[j+1][key]:
-                arr[j], arr[j+1] = arr[j+1], arr[j]
+        for j in range(0, n - i - 1):
+            if arr[j][key] > arr[j + 1][key]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
     return arr
 
 def insertion_sort(data, key):
@@ -42,16 +45,16 @@ def insertion_sort(data, key):
         cur = arr[i]
         j = i - 1
         while j >= 0 and arr[j][key] > cur[key]:
-            arr[j+1] = arr[j]
+            arr[j + 1] = arr[j]
             j -= 1
-        arr[j+1] = cur
+        arr[j + 1] = cur
     return arr
 
 def selection_sort(data, key):
     arr = data[:]
     for i in range(len(arr)):
         min_idx = i
-        for j in range(i+1, len(arr)):
+        for j in range(i + 1, len(arr)):
             if arr[j][key] < arr[min_idx][key]:
                 min_idx = j
         arr[i], arr[min_idx] = arr[min_idx], arr[i]
@@ -60,7 +63,7 @@ def selection_sort(data, key):
 def merge_sort(data, key):
     if len(data) <= 1:
         return data
-    mid = len(data)//2
+    mid = len(data) // 2
     left = merge_sort(data[:mid], key)
     right = merge_sort(data[mid:], key)
     return merge(left, right, key)
@@ -80,7 +83,7 @@ def merge(left, right, key):
 def shell_sort(data, key):
     arr = data[:]
     n = len(arr)
-    gap = n//2
+    gap = n // 2
     while gap > 0:
         for i in range(gap, n):
             temp = arr[i]
@@ -92,78 +95,78 @@ def shell_sort(data, key):
         gap //= 2
     return arr
 
-# =========================
-# LOGIN
-# =========================
-def login():
+# =============================
+# LOGIN PAGE
+# =============================
+def login_page():
     st.title("🔐 Login Manajemen Mahasiswa")
 
-    user = st.text_input("Username")
-    pwd = st.text_input("Password", type="password")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
     if st.button("Masuk"):
-        if user in USERS and USERS[user]["password"] == pwd:
+        if username in USERS and USERS[username]["password"] == password:
             st.session_state.login = True
-            st.session_state.role = USERS[user]["role"]
+            st.session_state.role = USERS[username]["role"]
             st.success("Login berhasil")
-            st.experimental_rerun()
+            st.rerun()
         else:
-            st.error("Username / password salah")
+            st.error("Username atau password salah")
 
-# =========================
+# =============================
 # MAIN APP
-# =========================
-def app():
+# =============================
+def main_app():
     st.title("🎓 Manajemen Data Mahasiswa")
+    st.caption(f"Role: {st.session_state.role}")
 
     data = load_data()
 
-    # ---- STATS
-    if data:
-        avg_ipk = sum(d["ipk"] for d in data) / len(data)
-    else:
-        avg_ipk = 0
+    # ---------- STATS ----------
+    total = len(data)
+    avg_ipk = round(sum(d["ipk"] for d in data) / total, 2) if total else 0
 
-    st.metric("Total Mahasiswa", len(data))
-    st.metric("Rata-rata IPK", round(avg_ipk, 2))
+    col1, col2 = st.columns(2)
+    col1.metric("Total Mahasiswa", total)
+    col2.metric("Rata-rata IPK", avg_ipk)
 
     st.divider()
 
-    # ---- FORM INPUT
-    st.subheader("➕ Tambah / Edit Mahasiswa")
+    # ---------- FORM ----------
+    st.subheader("➕ Tambah / Hapus Mahasiswa")
 
     nim = st.text_input("NIM (12 digit)")
-    nama = st.text_input("Nama")
-    jurusan = st.text_input("Jurusan")
+    name = st.text_input("Nama")
+    major = st.text_input("Jurusan")
     ipk = st.number_input("IPK", 0.0, 4.0, step=0.01)
 
-    col1, col2 = st.columns(2)
+    c1, c2 = st.columns(2)
 
-    with col1:
+    with c1:
         if st.button("Tambah"):
             if any(d["nim"] == nim for d in data):
-                st.error("NIM sudah ada")
+                st.error("NIM sudah terdaftar")
             else:
                 data.append({
                     "nim": nim,
-                    "name": nama,
-                    "major": jurusan,
+                    "name": name,
+                    "major": major,
                     "ipk": ipk
                 })
                 save_data(data)
                 st.success("Data ditambahkan")
-                st.experimental_rerun()
+                st.rerun()
 
-    with col2:
+    with c2:
         if st.button("Hapus"):
             data = [d for d in data if d["nim"] != nim]
             save_data(data)
             st.warning("Data dihapus")
-            st.experimental_rerun()
+            st.rerun()
 
     st.divider()
 
-    # ---- SEARCH
+    # ---------- SEARCH ----------
     st.subheader("🔍 Pencarian")
     keyword = st.text_input("Cari (nim / nama / jurusan)")
 
@@ -176,10 +179,10 @@ def app():
             or keyword.lower() in d["major"].lower()
         ]
 
-    # ---- SORT
+    # ---------- SORT ----------
     st.subheader("↕ Sorting")
     sort_method = st.selectbox(
-        "Metode",
+        "Metode Sorting",
         ["Bubble", "Insertion", "Selection", "Merge", "Shell"]
     )
 
@@ -195,17 +198,22 @@ def app():
         elif sort_method == "Shell":
             filtered = shell_sort(filtered, "name")
 
-    # ---- TABLE
+    # ---------- TABLE ----------
     st.subheader("📋 Data Mahasiswa")
     st.dataframe(filtered, use_container_width=True)
 
-# =========================
+    # ---------- LOGOUT ----------
+    if st.button("🚪 Logout"):
+        st.session_state.clear()
+        st.rerun()
+
+# =============================
 # ROUTER
-# =========================
+# =============================
 if "login" not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    login()
+    login_page()
 else:
-    app()
+    main_app()

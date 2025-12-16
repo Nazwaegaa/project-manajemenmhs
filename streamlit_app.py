@@ -4,6 +4,9 @@ import os
 
 DB_FILE = "students_db.json"
 
+# =============================
+# LOGIN DATA
+# =============================
 USERS = {
     "admin": {"password": "admin123", "role": "ADMIN"},
     "operator": {"password": "op123", "role": "OPERATOR"},
@@ -11,7 +14,7 @@ USERS = {
 }
 
 # =============================
-# DATABASE UTILS
+# DATABASE
 # =============================
 def load_data():
     if not os.path.exists(DB_FILE):
@@ -23,9 +26,64 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# PAKSA DATABASE KOSONG SAAT PERTAMA
+def clean_data(data):
+    return [
+        d for d in data
+        if d.get("nim") and d.get("name")
+    ]
+
+# reset database pertama kali
 if not os.path.exists(DB_FILE):
     save_data([])
+
+# =============================
+# SORTING ALGORITHMS
+# =============================
+def bubble_sort(data, key, reverse=False):
+    arr = data[:]
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            if (arr[j][key] > arr[j + 1][key]) ^ reverse:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+def shell_sort(data, key, reverse=False):
+    arr = data[:]
+    n = len(arr)
+    gap = n // 2
+    while gap > 0:
+        for i in range(gap, n):
+            temp = arr[i]
+            j = i
+            while j >= gap and ((arr[j-gap][key] > temp[key]) ^ reverse):
+                arr[j] = arr[j-gap]
+                j -= gap
+            arr[j] = temp
+        gap //= 2
+    return arr
+
+def merge_sort(data, key, reverse=False):
+    if len(data) <= 1:
+        return data
+
+    mid = len(data) // 2
+    left = merge_sort(data[:mid], key, reverse)
+    right = merge_sort(data[mid:], key, reverse)
+
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if (left[i][key] <= right[j][key]) ^ reverse:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
 
 # =============================
 # LOGIN PAGE
@@ -42,7 +100,7 @@ def login_page():
             st.session_state.role = USERS[u]["role"]
             st.rerun()
         else:
-            st.error("Login gagal")
+            st.error("Username atau password salah")
 
 # =============================
 # MAIN APP
@@ -51,9 +109,8 @@ def main_app():
     st.title("🎓 Manajemen Data Mahasiswa")
     st.caption(f"Role: {st.session_state.role}")
 
-    data = load_data()
+    data = clean_data(load_data())
 
-    # ===== STAT =====
     total = len(data)
     avg = round(sum(d["ipk"] for d in data) / total, 2) if total else 0
 
@@ -68,57 +125,49 @@ def main_app():
     # =============================
     st.subheader("🔍 Pencarian & Sorting")
 
-    s_col1, s_col2, s_col3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-    with s_col1:
-        search_field = st.selectbox(
-            "Cari berdasarkan",
-            ["nim", "name", "major", "ipk"]
-        )
+    with c1:
+        search_field = st.selectbox("Cari berdasarkan", ["nim", "name", "major", "ipk"])
+        search_value = st.text_input("Keyword")
 
-    with s_col2:
-        search_value = st.text_input("Kata kunci")
+    with c2:
+        sort_algo = st.selectbox("Metode Sorting", ["Bubble Sort", "Shell Sort", "Merge Sort"])
+        sort_field = st.selectbox("Field", ["nim", "name", "major", "ipk"])
 
-    with s_col3:
-        sort_field = st.selectbox(
-            "Urutkan berdasarkan",
-            ["nim", "name", "major", "ipk"]
-        )
+    with c3:
+        order = st.radio("Urutan", ["Ascending", "Descending"], horizontal=True)
 
-    asc = st.radio("Urutan", ["Ascending", "Descending"], horizontal=True)
-
-    # ===== FILTER DATA =====
+    # SEARCH
     filtered = data
     if search_value:
         if search_field == "ipk":
             try:
-                filtered = [
-                    d for d in filtered
-                    if float(search_value) == d["ipk"]
-                ]
+                filtered = [d for d in filtered if d["ipk"] == float(search_value)]
             except:
                 filtered = []
         else:
-            filtered = [
-                d for d in filtered
-                if search_value.lower() in d[search_field].lower()
-            ]
+            filtered = [d for d in filtered if search_value.lower() in d[search_field].lower()]
 
-    # ===== SORT DATA =====
-    reverse = asc == "Descending"
-    filtered = sorted(filtered, key=lambda x: x[sort_field], reverse=reverse)
+    reverse = order == "Descending"
+
+    # SORT
+    if sort_algo == "Bubble Sort":
+        filtered = bubble_sort(filtered, sort_field, reverse)
+    elif sort_algo == "Shell Sort":
+        filtered = shell_sort(filtered, sort_field, reverse)
+    else:
+        filtered = merge_sort(filtered, sort_field, reverse)
 
     st.divider()
 
     # =============================
-    # SELECT DATA (EDIT VIA KLIK)
+    # SELECT DATA
     # =============================
-    st.subheader("📋 Pilih Data")
-
     selected = None
     if filtered:
         selected = st.selectbox(
-            "Klik mahasiswa",
+            "Klik mahasiswa untuk Edit/Hapus",
             filtered,
             format_func=lambda x: f"{x['nim']} - {x['name']}"
         )
@@ -126,43 +175,32 @@ def main_app():
         st.info("Data tidak ditemukan")
 
     # =============================
-    # FORM INPUT
+    # FORM
     # =============================
     st.subheader("📝 Form Mahasiswa")
 
     nim = st.text_input("NIM", value=selected["nim"] if selected else "")
     name = st.text_input("Nama", value=selected["name"] if selected else "")
     major = st.text_input("Jurusan", value=selected["major"] if selected else "")
-    ipk = st.number_input(
-        "IPK", 0.0, 4.0, step=0.01,
-        value=selected["ipk"] if selected else 0.0
-    )
+    ipk = st.number_input("IPK", 0.0, 4.0, step=0.01,
+                          value=selected["ipk"] if selected else 0.0)
 
     b1, b2, b3 = st.columns(3)
 
-    # =============================
     # TAMBAH
-    # =============================
     with b1:
         if st.button("➕ Tambah"):
-            if not nim or not name:
+            if not nim.strip() or not name.strip():
                 st.error("NIM & Nama wajib diisi")
             elif any(d["nim"] == nim for d in data):
-                st.error("NIM sudah terdaftar")
+                st.error("NIM sudah ada")
             else:
-                data.append({
-                    "nim": nim,
-                    "name": name,
-                    "major": major,
-                    "ipk": ipk
-                })
+                data.append({"nim": nim, "name": name, "major": major, "ipk": ipk})
                 save_data(data)
-                st.success("Data berhasil ditambahkan")
+                st.success("Data ditambahkan")
                 st.rerun()
 
-    # =============================
     # EDIT
-    # =============================
     with b2:
         if st.button("✏️ Edit"):
             if not selected:
@@ -170,18 +208,13 @@ def main_app():
             else:
                 for d in data:
                     if d["nim"] == selected["nim"]:
-                        d["nim"] = nim
-                        d["name"] = name
-                        d["major"] = major
-                        d["ipk"] = ipk
+                        d.update({"nim": nim, "name": name, "major": major, "ipk": ipk})
                         break
                 save_data(data)
-                st.success("Data berhasil diupdate")
+                st.success("Data diperbarui")
                 st.rerun()
 
-    # =============================
     # HAPUS
-    # =============================
     with b3:
         if st.button("🗑️ Hapus"):
             if not selected:
@@ -192,9 +225,6 @@ def main_app():
                 st.warning("Data dihapus")
                 st.rerun()
 
-    # =============================
-    # TABLE VIEW
-    # =============================
     st.divider()
     st.subheader("📊 Tabel Mahasiswa")
     st.dataframe(filtered, use_container_width=True)

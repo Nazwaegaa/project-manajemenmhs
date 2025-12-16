@@ -15,7 +15,7 @@ USERS = {
 }
 
 # =============================
-# DATA UTILS
+# DATA UTILITIES
 # =============================
 def load_data():
     if not os.path.exists(DB_FILE):
@@ -32,29 +32,28 @@ def save_data(data):
 # =============================
 def bubble_sort(data, key):
     arr = data[:]
-    n = len(arr)
-    for i in range(n):
-        for j in range(0, n - i - 1):
-            if arr[j][key] > arr[j + 1][key]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    for i in range(len(arr)):
+        for j in range(len(arr)-i-1):
+            if arr[j][key] > arr[j+1][key]:
+                arr[j], arr[j+1] = arr[j+1], arr[j]
     return arr
 
 def insertion_sort(data, key):
     arr = data[:]
     for i in range(1, len(arr)):
         cur = arr[i]
-        j = i - 1
+        j = i-1
         while j >= 0 and arr[j][key] > cur[key]:
-            arr[j + 1] = arr[j]
+            arr[j+1] = arr[j]
             j -= 1
-        arr[j + 1] = cur
+        arr[j+1] = cur
     return arr
 
 def selection_sort(data, key):
     arr = data[:]
     for i in range(len(arr)):
         min_idx = i
-        for j in range(i + 1, len(arr)):
+        for j in range(i+1, len(arr)):
             if arr[j][key] < arr[min_idx][key]:
                 min_idx = j
         arr[i], arr[min_idx] = arr[min_idx], arr[i]
@@ -63,7 +62,7 @@ def selection_sort(data, key):
 def merge_sort(data, key):
     if len(data) <= 1:
         return data
-    mid = len(data) // 2
+    mid = len(data)//2
     left = merge_sort(data[:mid], key)
     right = merge_sort(data[mid:], key)
     return merge(left, right, key)
@@ -101,13 +100,13 @@ def shell_sort(data, key):
 def login_page():
     st.title("🔐 Login Manajemen Mahasiswa")
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    user = st.text_input("Username")
+    pwd = st.text_input("Password", type="password")
 
     if st.button("Masuk"):
-        if username in USERS and USERS[username]["password"] == password:
+        if user in USERS and USERS[user]["password"] == pwd:
             st.session_state.login = True
-            st.session_state.role = USERS[username]["role"]
+            st.session_state.role = USERS[user]["role"]
             st.success("Login berhasil")
             st.rerun()
         else:
@@ -125,27 +124,28 @@ def main_app():
     # ---------- STATS ----------
     total = len(data)
     avg_ipk = round(sum(d["ipk"] for d in data) / total, 2) if total else 0
-
-    col1, col2 = st.columns(2)
-    col1.metric("Total Mahasiswa", total)
-    col2.metric("Rata-rata IPK", avg_ipk)
+    c1, c2 = st.columns(2)
+    c1.metric("Total Mahasiswa", total)
+    c2.metric("Rata-rata IPK", avg_ipk)
 
     st.divider()
 
     # ---------- FORM ----------
-    st.subheader("➕ Tambah / Hapus Mahasiswa")
+    st.subheader("📝 Form Mahasiswa")
 
-    nim = st.text_input("NIM (12 digit)")
+    old_nim = st.text_input("NIM Lama (untuk EDIT)")
+    nim = st.text_input("NIM Baru")
     name = st.text_input("Nama")
     major = st.text_input("Jurusan")
     ipk = st.number_input("IPK", 0.0, 4.0, step=0.01)
 
-    c1, c2 = st.columns(2)
+    b1, b2, b3 = st.columns(3)
 
-    with c1:
-        if st.button("Tambah"):
+    # ---- TAMBAH ----
+    with b1:
+        if st.button("➕ Tambah"):
             if any(d["nim"] == nim for d in data):
-                st.error("NIM sudah terdaftar")
+                st.error("NIM sudah ada")
             else:
                 data.append({
                     "nim": nim,
@@ -154,21 +154,44 @@ def main_app():
                     "ipk": ipk
                 })
                 save_data(data)
-                st.success("Data ditambahkan")
+                st.success("Data berhasil ditambahkan")
                 st.rerun()
 
-    with c2:
-        if st.button("Hapus"):
-            data = [d for d in data if d["nim"] != nim]
-            save_data(data)
-            st.warning("Data dihapus")
-            st.rerun()
+    # ---- EDIT ----
+    with b2:
+        if st.button("✏️ Edit"):
+            found = False
+            for d in data:
+                if d["nim"] == old_nim:
+                    d["nim"] = nim
+                    d["name"] = name
+                    d["major"] = major
+                    d["ipk"] = ipk
+                    found = True
+                    break
+            if found:
+                save_data(data)
+                st.success("Data berhasil diupdate")
+                st.rerun()
+            else:
+                st.error("NIM lama tidak ditemukan")
+
+    # ---- HAPUS ----
+    with b3:
+        if st.button("🗑️ Hapus"):
+            new_data = [d for d in data if d["nim"] != nim]
+            if len(new_data) == len(data):
+                st.error("NIM tidak ditemukan")
+            else:
+                save_data(new_data)
+                st.warning("Data berhasil dihapus")
+                st.rerun()
 
     st.divider()
 
     # ---------- SEARCH ----------
     st.subheader("🔍 Pencarian")
-    keyword = st.text_input("Cari (nim / nama / jurusan)")
+    keyword = st.text_input("Cari (NIM / Nama / Jurusan)")
 
     filtered = deepcopy(data)
     if keyword:
@@ -181,21 +204,18 @@ def main_app():
 
     # ---------- SORT ----------
     st.subheader("↕ Sorting")
-    sort_method = st.selectbox(
-        "Metode Sorting",
-        ["Bubble", "Insertion", "Selection", "Merge", "Shell"]
-    )
+    method = st.selectbox("Metode", ["Bubble", "Insertion", "Selection", "Merge", "Shell"])
 
     if st.button("Apply Sorting"):
-        if sort_method == "Bubble":
+        if method == "Bubble":
             filtered = bubble_sort(filtered, "name")
-        elif sort_method == "Insertion":
+        elif method == "Insertion":
             filtered = insertion_sort(filtered, "name")
-        elif sort_method == "Selection":
+        elif method == "Selection":
             filtered = selection_sort(filtered, "name")
-        elif sort_method == "Merge":
+        elif method == "Merge":
             filtered = merge_sort(filtered, "name")
-        elif sort_method == "Shell":
+        elif method == "Shell":
             filtered = shell_sort(filtered, "name")
 
     # ---------- TABLE ----------

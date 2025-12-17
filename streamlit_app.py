@@ -6,8 +6,8 @@ import os
 # PAGE CONFIG (AMAN)
 # =============================
 st.set_page_config(
-    page_title="Arsip Mahasiswa",
-    page_icon="🜂",
+    page_title="Manajemen Data Mahasiswa",
+    page_icon="",
     layout="wide"
 )
 
@@ -122,7 +122,7 @@ if "login" not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    st.title("🜂 Portal Akademika")
+    st.title("Silahkan Login >-<")
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
 
@@ -137,7 +137,7 @@ if not st.session_state.login:
 # =============================
 # MAIN APP
 # =============================
-st.title("🜁 Arsip Mahasiswa Akademika")
+st.title("Manajemen Data Mahasiswa")
 
 data = clean_data(load_data())
 
@@ -153,7 +153,7 @@ st.divider()
 # =============================
 # SEARCH & SORT
 # =============================
-st.subheader("🜃 Seleksi Dataset")
+st.subheader("Seleksi Dataset")
 
 c1, c2, c3 = st.columns(3)
 
@@ -202,7 +202,7 @@ selected = next((d for d in data if d["nim"] == selected_nim), None)
 # =============================
 # FORM
 # =============================
-st.subheader("🜄 Form Entri")
+st.subheader("Form Mahasiswa")
 
 nim = st.text_input("NIM", value=selected["nim"] if selected else "")
 name = st.text_input("Nama", value=selected["name"] if selected else "")
@@ -244,7 +244,7 @@ with b3:
             st.rerun()
 
 st.divider()
-st.subheader("🜏 Tabel Dataset")
+st.subheader("Tabel Dataset")
 st.dataframe(filtered, use_container_width=True)
 
 if st.button("⟡ Terminasi Sesi"):

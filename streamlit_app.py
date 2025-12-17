@@ -5,6 +5,7 @@ import pandas as pd
 # =============================
 # CONFIG
 # =============================
+st.set_page_config(page_title="Manajemen Data Mahasiswa", layout="wide")
 DB_FILE = "students_db.json"
 
 USERS = {
@@ -14,14 +15,75 @@ USERS = {
 }
 
 # =============================
-# INIT STATE
+# CSS – YELLOW THEME, BLACK FONT
+# =============================
+st.markdown("""
+<style>
+html, body, [data-testid="stApp"] {
+    background: linear-gradient(180deg, #fffef8, #fff2b3);
+    color: #000000 !important;
+    font-family: "Segoe UI", "Inter", sans-serif;
+}
+h1,h2,h3,h4,h5,h6,p,span,label,div {
+    color: #000000 !important;
+}
+[data-testid="metric-container"] {
+    background: linear-gradient(145deg, #fff9d6, #ffe88a);
+    border-radius: 18px;
+    border: 1px solid #e6c94a;
+    box-shadow: 0 8px 20px rgba(255,204,0,0.35);
+}
+input, textarea {
+    background-color: #fffdf5 !important;
+    border-radius: 12px !important;
+    border: 1px solid #e6c94a !important;
+    color: #000000 !important;
+}
+[data-baseweb="select"] > div,
+[data-baseweb="input"] > div {
+    background-color: #fffdf5 !important;
+    border-radius: 12px;
+    border: 1px solid #e6c94a;
+    color: #000000 !important;
+}
+.stButton>button {
+    background: linear-gradient(135deg, #ffe066, #ffcc00);
+    color: #000000 !important;
+    border-radius: 16px;
+    font-weight: 700;
+    border: none;
+    box-shadow: 0 6px 14px rgba(255,193,7,0.45);
+}
+.stButton>button:hover {
+    transform: scale(1.03);
+}
+[data-testid="stDataFrame"] {
+    background-color: #fffdf5;
+    border-radius: 16px;
+    border: 1px solid #e6c94a;
+}
+thead tr th {
+    background-color: #ffe066 !important;
+    color: #000000 !important;
+    font-weight: 800;
+}
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #fff9d6, #ffe88a);
+    border-right: 1px solid #e6c94a;
+}
+hr {
+    border: 1px solid #e6c94a;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =============================
+# SESSION STATE
 # =============================
 if "login" not in st.session_state:
     st.session_state.login = False
 if "role" not in st.session_state:
     st.session_state.role = ""
-if "theme" not in st.session_state:
-    st.session_state.theme = "light"
 
 # =============================
 # DATABASE
@@ -71,7 +133,6 @@ def merge_sort(data, key, reverse=False):
     mid = len(data)//2
     left = merge_sort(data[:mid], key, reverse)
     right = merge_sort(data[mid:], key, reverse)
-
     res = []
     i = j = 0
     while i < len(left) and j < len(right):
@@ -84,52 +145,10 @@ def merge_sort(data, key, reverse=False):
     return res
 
 # =============================
-# THEMES
+# LOGIN PAGE
 # =============================
-LIGHT = """
-<style>
-html, body, [data-testid="stApp"] {
-background: linear-gradient(180deg,#fffdf5,#fff3c4);
-color:#3a2f00;
-}
-h1,h2,h3{color:#b89000;}
-.stButton>button{
-background:linear-gradient(135deg,#ffe58a,#f1c232);
-border-radius:16px;font-weight:700;
-}
-[data-testid="metric-container"]{
-background:linear-gradient(145deg,#fff6d8,#ffeaa0);
-border-radius:18px;
-}
-thead tr th{background:#ffe58a!important;}
-</style>
-"""
-
-DARK = """
-<style>
-html, body, [data-testid="stApp"] {
-background:linear-gradient(180deg,#1a1500,#000);
-color:#ffe9a3;
-}
-h1,h2,h3{color:#ffd966;}
-.stButton>button{
-background:linear-gradient(135deg,#ffd966,#c9a300);
-border-radius:16px;font-weight:700;
-}
-[data-testid="metric-container"]{
-background:#151100;border-radius:18px;
-}
-thead tr th{background:#3a2f00!important;color:#ffe9a3!important;}
-</style>
-"""
-
-st.markdown(LIGHT if st.session_state.theme=="light" else DARK, unsafe_allow_html=True)
-
-# =============================
-# LOGIN
-# =============================
-def login():
-    st.title("🔐 Sistem Akademik")
+def login_page():
+    st.title("🔐 Login Sistem Akademik")
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
     if st.button("Masuk"):
@@ -138,90 +157,103 @@ def login():
             st.session_state.role = USERS[u]["role"]
             st.rerun()
         else:
-            st.error("Login gagal")
+            st.error("Username atau password salah")
 
 # =============================
-# APP
+# MAIN APP
 # =============================
-def app():
+def main_app():
     with st.sidebar:
-        st.markdown("## ⚙️ Control Center")
-        if st.toggle("☼ / ☾ Mode"):
-            st.session_state.theme = "dark" if st.session_state.theme=="light" else "light"
-            st.rerun()
+        st.markdown("## ⚙️ Control Panel")
         st.caption(f"Role: **{st.session_state.role}**")
 
     st.title("🎓 Manajemen Data Mahasiswa")
 
     data = load_data()
 
-    c1,c2 = st.columns(2)
+    c1, c2 = st.columns(2)
     c1.metric("Total Mahasiswa", len(data))
     c2.metric("Rata-rata IPK", round(sum(d["ipk"] for d in data)/len(data),2) if data else 0)
 
     st.divider()
 
     # SEARCH & SORT
-    s1,s2,s3 = st.columns(3)
-    field = s1.selectbox("Cari", ["nim","name","major"])
+    s1, s2, s3 = st.columns(3)
+    search_field = s1.selectbox("Cari berdasarkan", ["nim","name","major"])
     keyword = s1.text_input("Keyword")
 
-    algo = s2.selectbox("Sorting", ["Bubble","Shell","Merge"])
+    sort_algo = s2.selectbox("Metode Sorting", ["Bubble","Shell","Merge"])
     sort_field = s2.selectbox("Field", ["nim","name","major","ipk"])
 
-    order = s3.radio("Urutan",["Ascending","Descending"],horizontal=True)
+    order = s3.radio("Urutan", ["Ascending","Descending"], horizontal=True)
 
     filtered = data
     if keyword:
-        filtered = [d for d in filtered if keyword.lower() in str(d[field]).lower()]
+        filtered = [d for d in filtered if keyword.lower() in str(d[search_field]).lower()]
 
-    min_ipk,max_ipk = st.slider("Filter IPK",0.0,4.0,(0.0,4.0),0.01)
+    min_ipk, max_ipk = st.slider("Filter IPK", 0.0, 4.0, (0.0,4.0), 0.01)
     filtered = [d for d in filtered if min_ipk <= d["ipk"] <= max_ipk]
 
-    reverse = order=="Descending"
-    start=time.time()
-    if algo=="Bubble":
-        filtered=bubble_sort(filtered,sort_field,reverse)
-    elif algo=="Shell":
-        filtered=shell_sort(filtered,sort_field,reverse)
+    reverse = order == "Descending"
+    start = time.time()
+    if sort_algo == "Bubble":
+        filtered = bubble_sort(filtered, sort_field, reverse)
+    elif sort_algo == "Shell":
+        filtered = shell_sort(filtered, sort_field, reverse)
     else:
-        filtered=merge_sort(filtered,sort_field,reverse)
-    st.caption(f"⏱️ Sorting time: {round(time.time()-start,5)} s")
+        filtered = merge_sort(filtered, sort_field, reverse)
+    st.caption(f"⏱️ Waktu sorting: {round(time.time()-start,5)} detik")
 
     st.divider()
 
     # FORM
-    selected = st.selectbox("Pilih Mahasiswa", filtered, format_func=lambda x:f"{x['nim']} - {x['name']}") if filtered else None
+    selected = st.selectbox(
+        "Pilih Mahasiswa (untuk Edit / Hapus)",
+        filtered,
+        format_func=lambda x: f"{x['nim']} - {x['name']}"
+    ) if filtered else None
 
     nim = st.text_input("NIM", selected["nim"] if selected else "")
     name = st.text_input("Nama", selected["name"] if selected else "")
     major = st.text_input("Jurusan", selected["major"] if selected else "")
-    ipk = st.number_input("IPK",0.0,4.0,value=selected["ipk"] if selected else 0.0,step=0.01)
+    ipk = st.number_input("IPK", 0.0, 4.0, step=0.01,
+                          value=selected["ipk"] if selected else 0.0)
 
-    if st.session_state.role!="VIEWER":
-        b1,b2,b3 = st.columns(3)
+    if st.session_state.role != "VIEWER":
+        b1, b2, b3 = st.columns(3)
+
         if b1.button("➕ Tambah"):
-            if len(nim)!=12 or not nim.isdigit():
-                st.error("NIM harus 12 digit")
+            if len(nim) != 12 or not nim.isdigit():
+                st.error("NIM harus 12 digit angka")
+            elif any(d["nim"] == nim for d in data):
+                st.error("NIM sudah terdaftar")
             else:
                 data.append({"nim":nim,"name":name,"major":major,"ipk":ipk})
-                save_data(data); st.rerun()
+                save_data(data)
+                st.rerun()
 
         if b2.button("✏️ Edit") and selected:
             for d in data:
-                if d["nim"]==selected["nim"]:
+                if d["nim"] == selected["nim"]:
                     d.update({"nim":nim,"name":name,"major":major,"ipk":ipk})
-            save_data(data); st.rerun()
+            save_data(data)
+            st.rerun()
 
         if b3.button("🗑️ Hapus") and selected:
-            save_data([d for d in data if d["nim"]!=selected["nim"]])
+            save_data([d for d in data if d["nim"] != selected["nim"]])
             st.rerun()
 
     st.divider()
-    df=pd.DataFrame(filtered)
-    st.dataframe(df,use_container_width=True)
 
-    st.download_button("⬇️ Export CSV",df.to_csv(index=False),"mahasiswa.csv","text/csv")
+    df = pd.DataFrame(filtered)
+    st.dataframe(df, use_container_width=True)
+
+    st.download_button(
+        "⬇️ Export CSV",
+        df.to_csv(index=False),
+        "mahasiswa.csv",
+        "text/csv"
+    )
 
     if st.button("🚪 Logout"):
         st.session_state.clear()
@@ -230,4 +262,7 @@ def app():
 # =============================
 # ROUTING
 # =============================
-login() if not st.session_state.login else app()
+if not st.session_state.login:
+    login_page()
+else:
+    main_app()
